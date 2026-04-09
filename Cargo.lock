@@ -308,7 +308,7 @@ dependencies = [
  "polling 2.8.0",
  "rustix 0.37.28",
  "slab",
- "socket2",
+ "socket2 0.4.10",
  "waker-fn",
 ]
 
@@ -1966,6 +1966,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
+name = "ksni"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5b29c089f14ce24c5b25d9bdcb265413b5e0c3df0871823e0d96bd83bc52a24"
+dependencies = [
+ "futures-util",
+ "once_cell",
+ "pastey",
+ "serde",
+ "tokio",
+ "zbus 5.14.0",
+]
+
+[[package]]
 name = "leb128fmt"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2119,6 +2133,17 @@ checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
 dependencies = [
  "adler2",
  "simd-adler32",
+]
+
+[[package]]
+name = "mio"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50b7e5b27aa02a74bac8c3f23f448f8d87ff11f92d3aac1a6ed369ee08cc56c1"
+dependencies = [
+ "libc",
+ "wasi",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2557,6 +2582,12 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
+name = "pastey"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b867cad97c0791bbd3aaa6472142568c6c9e8f71937e98379f584cfb0cf35bec"
 
 [[package]]
 name = "percent-encoding"
@@ -3207,6 +3238,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "socket2"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
+dependencies = [
+ "libc",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "spirv"
 version = "0.3.0+sdk-1.3.268.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3361,6 +3402,34 @@ checksum = "c8323304221c2a851516f22236c5722a72eaa19749016521d6dff0824447d96d"
 dependencies = [
  "displaydoc",
  "zerovec",
+]
+
+[[package]]
+name = "tokio"
+version = "1.51.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f66bf9585cda4b724d3e78ab34b73fb2bbaba9011b9bfdf69dc836382ea13b8c"
+dependencies = [
+ "bytes",
+ "libc",
+ "mio",
+ "pin-project-lite",
+ "signal-hook-registry",
+ "socket2 0.6.3",
+ "tokio-macros",
+ "tracing",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "385a6cb71ab9ab790c5fe8d67f1645e6c450a7ce006a33de03daa956cf70a496"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -3566,6 +3635,7 @@ checksum = "5ac8b6f42ead25368cf5b098aeb3dc8a1a2c05a3eee8a9a1a68c640edbfc79d9"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
+ "serde_core",
  "wasm-bindgen",
 ]
 
@@ -3586,6 +3656,7 @@ dependencies = [
  "egui",
  "egui-phosphor",
  "keyring",
+ "ksni",
  "rfd",
  "serde",
  "serde_json",
@@ -4761,6 +4832,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "zbus"
+version = "5.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca82f95dbd3943a40a53cfded6c2d0a2ca26192011846a1810c4256ef92c60bc"
+dependencies = [
+ "async-broadcast 0.7.2",
+ "async-recursion",
+ "async-trait",
+ "enumflags2",
+ "event-listener 5.4.1",
+ "futures-core",
+ "futures-lite 2.6.1",
+ "hex",
+ "libc",
+ "ordered-stream",
+ "rustix 1.1.4",
+ "serde",
+ "serde_repr",
+ "tokio",
+ "tracing",
+ "uds_windows",
+ "uuid",
+ "windows-sys 0.61.2",
+ "winnow 0.7.15",
+ "zbus_macros 5.14.0",
+ "zbus_names 4.3.1",
+ "zvariant 5.10.0",
+]
+
+[[package]]
 name = "zbus_macros"
 version = "3.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4788,6 +4889,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "zbus_macros"
+version = "5.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "897e79616e84aac4b2c46e9132a4f63b93105d54fe8c0e8f6bffc21fa8d49222"
+dependencies = [
+ "proc-macro-crate 3.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+ "zbus_names 4.3.1",
+ "zvariant 5.10.0",
+ "zvariant_utils 3.3.0",
+]
+
+[[package]]
 name = "zbus_names"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4807,6 +4923,17 @@ dependencies = [
  "serde",
  "static_assertions",
  "zvariant 4.2.0",
+]
+
+[[package]]
+name = "zbus_names"
+version = "4.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffd8af6d5b78619bab301ff3c560a5bd22426150253db278f164d6cf3b72c50f"
+dependencies = [
+ "serde",
+ "winnow 0.7.15",
+ "zvariant 5.10.0",
 ]
 
 [[package]]
@@ -4924,6 +5051,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "zvariant"
+version = "5.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5708299b21903bbe348e94729f22c49c55d04720a004aa350f1f9c122fd2540b"
+dependencies = [
+ "endi",
+ "enumflags2",
+ "serde",
+ "winnow 0.7.15",
+ "zvariant_derive 5.10.0",
+ "zvariant_utils 3.3.0",
+]
+
+[[package]]
 name = "zvariant_derive"
 version = "3.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4950,6 +5091,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zvariant_derive"
+version = "5.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b59b012ebe9c46656f9cc08d8da8b4c726510aef12559da3e5f1bf72780752c"
+dependencies = [
+ "proc-macro-crate 3.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+ "zvariant_utils 3.3.0",
+]
+
+[[package]]
 name = "zvariant_utils"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4969,4 +5123,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "zvariant_utils"
+version = "3.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f75c23a64ef8f40f13a6989991e643554d9bef1d682a281160cf0c1bc389c5e9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn 2.0.117",
+ "winnow 0.7.15",
 ]

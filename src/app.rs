@@ -2,6 +2,7 @@ mod connect;
 mod profiles;
 mod proxies;
 mod state;
+pub mod tray;
 mod widgets;
 
 pub use state::App;
@@ -13,6 +14,27 @@ use state::Tab;
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if let Some(tray_ctx) = &self.tray_ctx {
+            let mut guard = tray_ctx.lock().unwrap();
+            if guard.is_none() {
+                *guard = Some(ctx.clone());
+            }
+        }
+
+        if let Some(rx) = &self.tray_rx {
+            while let Ok(action) = rx.try_recv() {
+                match action {
+                    crate::app::tray::TrayAction::ToggleWindow => {
+                        self.is_window_visible = !self.is_window_visible;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(self.is_window_visible));
+                    }
+                    crate::app::tray::TrayAction::Quit => {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                }
+            }
+        }
+
         self.poll_vpn_events();
 
         if matches!(

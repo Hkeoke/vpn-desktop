@@ -52,6 +52,7 @@ egui-phosphor = "0.6"
 
 # JSON para IPC entre la GUI y el helper root
 serde_json = "1"
+ksni = { version = "0.3.3", features = ["blocking"] }
 
 [profile.release]
 opt-level = 3

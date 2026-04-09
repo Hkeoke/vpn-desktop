@@ -14,10 +14,27 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
+    let (tray_tx, tray_rx) = crossbeam_channel::unbounded();
+    let tray_ctx = std::sync::Arc::new(std::sync::Mutex::new(None));
+
+    let tray = vpn_desktop::app::tray::VpnTray {
+        tx: tray_tx,
+        ctx: std::sync::Arc::clone(&tray_ctx),
+        is_connected: false,
+    };
+    let tray_handle = ksni::blocking::TrayMethods::spawn(tray).unwrap();
+
     eframe::run_native(
         "VPN Desktop",
         native_options,
-        Box::new(|cc| Ok(Box::new(App::new(cc)))),
+        Box::new(move |cc| {
+            Ok(Box::new(App::new(
+                cc,
+                Some(tray_rx),
+                Some(tray_ctx),
+                Some(tray_handle),
+            )))
+        }),
     )
     .map_err(|err| anyhow::anyhow!("No se pudo iniciar la aplicación: {}", err))?;
 

@@ -1,5 +1,7 @@
 # VPN Desktop
 
+cargo build --manifest-path vpn-desktop/Cargo.toml --release && sh vpn-desktop/packaging/linux/build-deb.sh
+
 Aplicación desktop en Rust para Linux que gestiona perfiles OpenVPN con una interfaz gráfica, soporte de proxy y credenciales guardadas en el keyring del sistema.
 
 ## Estado del proyecto

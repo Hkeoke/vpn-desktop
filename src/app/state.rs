@@ -22,6 +22,10 @@ pub struct Notification {
     pub is_error: bool,
 }
 
+use crate::app::tray::TrayAction;
+use crossbeam_channel::Receiver;
+use std::sync::{Arc, Mutex};
+
 pub struct App {
     pub config: AppConfig,
     pub vpn: VpnManager,
@@ -35,10 +39,19 @@ pub struct App {
     pub profile_form: Option<(VpnProfile, bool)>,
     pub proxy_form: Option<(ProxyConfig, bool)>,
     pub notification: Option<Notification>,
+    pub tray_rx: Option<Receiver<TrayAction>>,
+    pub tray_ctx: Option<Arc<Mutex<Option<egui::Context>>>>,
+    pub tray_handle: Option<ksni::blocking::Handle<crate::app::tray::VpnTray>>,
+    pub is_window_visible: bool,
 }
 
 impl App {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        tray_rx: Option<Receiver<TrayAction>>,
+        tray_ctx: Option<Arc<Mutex<Option<egui::Context>>>>,
+        tray_handle: Option<ksni::blocking::Handle<crate::app::tray::VpnTray>>,
+    ) -> Self {
         install_theme_and_fonts(&cc.egui_ctx);
 
         let config = AppConfig::load();
@@ -72,6 +85,10 @@ impl App {
             profile_form: None,
             proxy_form: None,
             notification: None,
+            tray_rx,
+            tray_ctx,
+            tray_handle,
+            is_window_visible: true,
         }
     }
 
@@ -102,7 +119,13 @@ impl App {
                     }
                 }
                 VpnEvent::StatusChanged(status) => {
-                    self.vpn_status = status;
+                    self.vpn_status = status.clone();
+                    if let Some(tray) = &mut self.tray_handle {
+                        let is_connected = matches!(status, VpnStatus::Connected);
+                        let _ = tray.update(|t| {
+                            t.is_connected = is_connected;
+                        });
+                    }
                 }
                 VpnEvent::HelperStatusChanged(status) => {
                     self.helper_status = status;
