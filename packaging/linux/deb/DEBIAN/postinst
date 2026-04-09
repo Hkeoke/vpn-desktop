@@ -1,0 +1,86 @@
+#!/bin/sh
+set -eu
+
+APP_NAME="vpn-desktop"
+HELPER_NAME="vpn-desktopd"
+GROUP_NAME="vpn-desktop"
+
+SYSTEMCTL="/bin/systemctl"
+GETENT="/usr/bin/getent"
+GROUPADD="/usr/sbin/groupadd"
+
+log() {
+    printf '%s\n' "[postinst] $*"
+}
+
+warn() {
+    printf '%s\n' "[postinst][warn] $*" >&2
+}
+
+have_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+ensure_group() {
+    if have_cmd "$GETENT" && "$GETENT" group "$GROUP_NAME" >/dev/null 2>&1; then
+        log "grupo '$GROUP_NAME' ya existe"
+        return 0
+    fi
+
+    if have_cmd "$GROUPADD"; then
+        log "creando grupo del sistema '$GROUP_NAME'"
+        "$GROUPADD" --system "$GROUP_NAME"
+    else
+        warn "no se encontró groupadd; crea manualmente el grupo '$GROUP_NAME' si el socket no es accesible"
+    fi
+}
+
+reload_systemd() {
+    if have_cmd "$SYSTEMCTL"; then
+        log "recargando configuración de systemd"
+        "$SYSTEMCTL" daemon-reload || warn "falló systemctl daemon-reload"
+    else
+        warn "systemctl no está disponible; recarga systemd manualmente"
+    fi
+}
+
+enable_socket() {
+    if have_cmd "$SYSTEMCTL"; then
+        log "habilitando y arrancando ${HELPER_NAME}.socket"
+        "$SYSTEMCTL" enable --now "${HELPER_NAME}.socket" || warn "no se pudo habilitar/arrancar ${HELPER_NAME}.socket"
+    else
+        warn "systemctl no está disponible; habilita manualmente ${HELPER_NAME}.socket"
+    fi
+}
+
+print_user_note() {
+    printf '%s\n' ""
+    printf '%s\n' "VPN Desktop se ha instalado correctamente."
+    printf '%s\n' ""
+    printf '%s\n' "Notas importantes:"
+    printf '%s\n' "  - El helper privilegiado usa el grupo '$GROUP_NAME' para el acceso al socket."
+    printf '%s\n' "  - Añade tu usuario a ese grupo para usar la app sin errores de permisos:"
+    printf '%s\n' "      sudo usermod -a -G $GROUP_NAME <tu_usuario>"
+    printf '%s\n' "  - Después de añadir el usuario al grupo, cierra sesión y vuelve a entrar."
+    printf '%s\n' "  - Asegúrate de tener 'openvpn' instalado en el sistema."
+}
+
+case "${1:-configure}" in
+    configure)
+        ensure_group
+        reload_systemd
+        enable_socket
+        print_user_note
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        exit 0
+        ;;
+    *)
+        log "invocado con acción no manejada explícitamente: $1"
+        ensure_group
+        reload_systemd
+        enable_socket
+        ;;
+esac
+
+exit 0

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=VPN Desktop
+GenericName=OpenVPN Desktop Manager
+Comment=Manage OpenVPN profiles and connections on Linux
+Exec=/usr/bin/vpn-desktop
+Icon=vpn-desktop
+Terminal=false
+StartupNotify=true
+Categories=Network;Utility;
+Keywords=vpn;openvpn;proxy;network;linux;
+StartupWMClass=vpn-desktop

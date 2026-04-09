@@ -1,0 +1,14 @@
+[Unit]
+Description=VPN Desktop root helper socket
+Documentation=man:systemd.socket(5)
+PartOf=vpn-desktopd.service
+
+[Socket]
+ListenStream=/run/vpn-desktopd.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=vpn-desktop
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

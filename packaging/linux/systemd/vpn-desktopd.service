@@ -1,0 +1,40 @@
+[Unit]
+Description=VPN Desktop privileged helper daemon
+Documentation=https://example.invalid/vpn-desktop
+Requires=vpn-desktopd.socket
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/vpn-desktopd
+Restart=on-failure
+RestartSec=2s
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+UMask=0077
+RuntimeDirectory=vpn-desktop
+RuntimeDirectoryMode=0755
+
+# Capabilities required for managing OpenVPN, routes, DNS and tun/tap
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_KILL
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_KILL
+
+# Allow access to OpenVPN and helper-managed runtime data
+ReadWritePaths=/run /etc/openvpn
+
+[Install]
+WantedBy=multi-user.target
+Also=vpn-desktopd.socket

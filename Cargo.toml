@@ -1,0 +1,63 @@
+[package]
+name = "vpn-desktop"
+version = "0.1.0"
+edition = "2021"
+description = "Gestor de conexiones OpenVPN para Linux"
+authors = ["VPN Desktop"]
+
+[lib]
+name = "vpn_desktop"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vpn-desktop"
+path = "src/main.rs"
+
+[[bin]]
+name = "vpn-desktopd"
+path = "src/bin/vpn-desktopd.rs"
+
+[dependencies]
+# GUI framework
+eframe = { version = "0.28", default-features = true }
+egui = "0.28"
+
+# Serialización / configuración
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# IDs únicos
+uuid = { version = "1", features = ["v4"] }
+
+# Manejo de errores
+anyhow = "1"
+
+# Comunicación entre hilos
+crossbeam-channel = "0.5"
+
+# Diálogo de archivos (file picker)
+rfd = "0.14"
+
+# Directorio de configuración del sistema (~/.config)
+dirs = "5"
+
+# Ficheros temporales seguros para credenciales en runtime
+tempfile = "3"
+
+# Integración con el keyring del sistema en Linux
+keyring = "3"
+
+# Iconos Phosphor para la interfaz egui
+egui-phosphor = "0.6"
+
+# JSON para IPC entre la GUI y el helper root
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1

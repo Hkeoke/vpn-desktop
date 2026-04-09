@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+PACKAGE_NAME="vpn-desktop"
+SOCKET_UNIT="vpn-desktopd.socket"
+SERVICE_UNIT="vpn-desktopd.service"
+
+if command -v systemctl >/dev/null 2>&1; then
+    case "${1:-}" in
+        remove|purge)
+            systemctl daemon-reload >/dev/null 2>&1 || true
+            ;;
+        *)
+            :
+            ;;
+    esac
+fi
+
+if [ "${1:-}" = "purge" ]; then
+    echo "Purga completada para ${PACKAGE_NAME}."
+    echo "La configuración de usuario y los secretos del keyring no se eliminan automáticamente."
+    echo "Si ya no necesitas el grupo del sistema '${PACKAGE_NAME}', puedes borrarlo manualmente."
+fi
+
+exit 0

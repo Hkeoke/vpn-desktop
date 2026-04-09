@@ -1,0 +1,20 @@
+Package: vpn-desktop
+Version: 0.1.0
+Section: net
+Priority: optional
+Architecture: amd64
+Maintainer: VPN Desktop
+Depends: openvpn, systemd
+Recommends: librsvg2-bin
+Description: Gestor de conexiones OpenVPN para Linux
+ VPN Desktop es una aplicación de escritorio en Rust para Linux que
+ permite gestionar perfiles OpenVPN con una interfaz gráfica.
+ .
+ La aplicación usa una arquitectura con:
+  - GUI sin privilegios
+  - helper privilegiado vpn-desktopd
+  - comunicación por socket Unix
+  - activación mediante systemd
+ .
+ Incluye integración de escritorio, icono de aplicación y soporte
+ de instalación para el helper root mediante un paquete Debian.
