@@ -47,6 +47,8 @@ impl App {
                         "No hay perfiles disponibles. Crea uno en “Perfiles VPN”.",
                     );
                 } else {
+                    let prev_profile = self.selected_profile_id.clone();
+
                     let current_name = self
                         .selected_profile_id
                         .as_deref()
@@ -66,11 +68,17 @@ impl App {
                                 );
                             }
                         });
+
+                    if self.selected_profile_id != prev_profile {
+                        self.save_config();
+                    }
                 }
 
                 ui.add_space(8.0);
 
                 compact_label(ui, "Proxy");
+                let prev_proxy = self.selected_proxy_id.clone();
+
                 let current_proxy_name = self
                     .selected_proxy_id
                     .as_deref()
@@ -92,6 +100,10 @@ impl App {
                             );
                         }
                     });
+
+                if self.selected_proxy_id != prev_proxy {
+                    self.save_config();
+                }
             });
     }
 

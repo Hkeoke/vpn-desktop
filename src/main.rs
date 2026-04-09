@@ -6,6 +6,7 @@ fn main() -> Result<()> {
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("VPN Desktop")
+            .with_app_id("vpn-desktop")
             .with_inner_size([400.0, 600.0])
             .with_min_inner_size([420.0, 560.0])
             .with_resizable(false)

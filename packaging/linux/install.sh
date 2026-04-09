@@ -207,6 +207,16 @@ main() {
         warn "no se encontró icono SVG en $ICON_SRC; se omite la instalación del icono"
     fi
 
+    if have_cmd gtk-update-icon-cache; then
+        log "actualizando caché de iconos"
+        gtk-update-icon-cache -f -t "$PREFIX/share/icons/hicolor" 2>/dev/null || true
+    fi
+
+    if have_cmd update-desktop-database; then
+        log "actualizando base de datos de aplicaciones"
+        update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+    fi
+
     reload_systemd
     enable_units
 

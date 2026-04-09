@@ -1,21 +1,18 @@
-<!--
-tags: [secure, security, closed, key, safety, shield, lock, private, control, operation]
-category: System
-version: "1.30"
-unicode: "ed58"
--->
 <svg
   xmlns="http://www.w3.org/2000/svg"
-  width="24"
-  height="24"
+  width="256"
+  height="256"
   viewBox="0 0 24 24"
   fill="none"
-  stroke="currentColor"
+  stroke="#3b82f6"
   stroke-width="2"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" />
-  <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
-  <path d="M12 12l0 2.5" />
+  <!-- Fondo del escudo (relleno) -->
+  <path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" fill="#1d4ed8" stroke="#3b82f6" />
+  <!-- Cerradura (círculo) -->
+  <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" stroke="#f5f7fa" fill="#f5f7fa" />
+  <!-- Cerradura (línea) -->
+  <path d="M12 12l0 2.5" stroke="#f5f7fa" />
 </svg>

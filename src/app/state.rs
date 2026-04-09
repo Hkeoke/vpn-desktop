@@ -43,8 +43,21 @@ impl App {
 
         let config = AppConfig::load();
 
-        let selected_profile_id = config.vpn_profiles.first().map(|p| p.id.clone());
-        let selected_proxy_id = config.proxy_configs.first().map(|p| p.id.clone());
+        // Restaurar las selecciones persistidas, validando que los IDs siguen existiendo.
+        // Si un ID guardado ya no corresponde a un perfil/proxy existente, se cae al primero disponible.
+        let selected_profile_id = config
+            .selected_profile_id
+            .as_deref()
+            .filter(|id| config.find_profile(id).is_some())
+            .map(|id| id.to_string())
+            .or_else(|| config.vpn_profiles.first().map(|p| p.id.clone()));
+
+        let selected_proxy_id = config
+            .selected_proxy_id
+            .as_deref()
+            .filter(|id| config.find_proxy(id).is_some())
+            .map(|id| id.to_string())
+            .or_else(|| config.proxy_configs.first().map(|p| p.id.clone()));
 
         Self {
             config,
@@ -62,7 +75,11 @@ impl App {
         }
     }
 
+    /// Sincroniza las selecciones del runtime con AppConfig y guarda en disco.
     pub fn save_config(&mut self) {
+        self.config.selected_profile_id = self.selected_profile_id.clone();
+        self.config.selected_proxy_id = self.selected_proxy_id.clone();
+
         if let Err(e) = self.config.save() {
             self.notify_error(format!("Error al guardar la configuración: {}", e));
         }

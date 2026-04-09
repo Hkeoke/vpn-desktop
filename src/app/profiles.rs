@@ -1,4 +1,5 @@
 use eframe::egui::{self, Color32, RichText, ScrollArea, Stroke, Ui};
+use egui_phosphor::regular;
 
 use super::state::{App, FormAction};
 use crate::config::{AppConfig, VpnProfile};
@@ -8,8 +9,6 @@ impl App {
         ScrollArea::vertical()
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                header(ui);
-
                 let form_result = if let Some((form, is_new)) = self.profile_form.take() {
                     Some(render_profile_form(ui, form, is_new))
                 } else {
@@ -40,24 +39,48 @@ impl App {
                 }
 
                 if self.profile_form.is_none() {
-                    let add_button = egui::Button::new(
-                        RichText::new("➕ Nuevo perfil")
-                            .strong()
-                            .color(Color32::from_rgb(245, 247, 250)),
-                    )
-                    .fill(Color32::from_rgb(44, 118, 255))
-                    .stroke(Stroke::new(1.0, Color32::from_rgb(66, 138, 255)))
-                    .min_size(egui::vec2(ui.available_width(), 34.0));
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new(regular::PLUS)
+                                        .size(16.0)
+                                        .color(Color32::WHITE),
+                                )
+                                .fill(Color32::from_rgb(37, 99, 235))
+                                .stroke(Stroke::new(1.0, Color32::from_rgb(59, 130, 246)))
+                                .min_size(egui::vec2(34.0, 34.0)),
+                            )
+                            .on_hover_text("Nuevo perfil")
+                            .clicked()
+                        {
+                            self.profile_form = Some((VpnProfile::new(), true));
+                        }
+                    });
 
-                    if ui.add(add_button).clicked() {
-                        self.profile_form = Some((VpnProfile::new(), true));
-                    }
-
-                    ui.add_space(10.0);
+                    ui.add_space(4.0);
                 }
 
                 if self.config.vpn_profiles.is_empty() && self.profile_form.is_none() {
-                    empty_state(ui);
+                    ui.add_space(40.0);
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            RichText::new(regular::SHIELD_WARNING)
+                                .size(36.0)
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
+                        ui.add_space(8.0);
+                        ui.label(
+                            RichText::new("Sin perfiles VPN")
+                                .size(15.0)
+                                .color(Color32::from_rgb(148, 163, 184)),
+                        );
+                        ui.label(
+                            RichText::new("Crea uno para empezar a conectar.")
+                                .size(12.0)
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
+                    });
                     return;
                 }
 
@@ -65,99 +88,90 @@ impl App {
                 let mut delete_id: Option<String> = None;
 
                 for profile in &self.config.vpn_profiles {
-                    egui::Frame::group(ui.style())
-                        .fill(Color32::from_rgb(26, 31, 40))
-                        .stroke(Stroke::new(1.0, Color32::from_rgb(48, 56, 72)))
+                    let is_selected = self.selected_profile_id.as_deref() == Some(&profile.id);
+
+                    let (bg, border) = if is_selected {
+                        (
+                            Color32::from_rgb(23, 37, 58),
+                            Color32::from_rgb(59, 130, 246),
+                        )
+                    } else {
+                        (
+                            Color32::from_rgb(22, 28, 38),
+                            Color32::from_rgb(40, 48, 62),
+                        )
+                    };
+
+                    egui::Frame::none()
+                        .fill(bg)
+                        .stroke(Stroke::new(1.0, border))
+                        .rounding(egui::Rounding::same(10.0))
+                        .inner_margin(egui::Margin::symmetric(12.0, 10.0))
                         .show(ui, |ui| {
-                            ui.vertical(|ui| {
-                                ui.horizontal(|ui| {
-                                    ui.label(
-                                        RichText::new(format!("🔐 {}", profile.name))
-                                            .strong()
-                                            .size(15.0)
-                                            .color(Color32::from_rgb(238, 242, 248)),
-                                    );
-
-                                    ui.with_layout(
-                                        egui::Layout::right_to_left(egui::Align::Center),
-                                        |ui| {
-                                            let delete_button = egui::Button::new(
-                                                RichText::new("🗑")
-                                                    .color(Color32::from_rgb(250, 250, 250)),
-                                            )
-                                            .fill(Color32::from_rgb(168, 54, 54))
-                                            .stroke(Stroke::new(
-                                                1.0,
-                                                Color32::from_rgb(190, 72, 72),
-                                            ))
-                                            .min_size(egui::vec2(32.0, 32.0));
-
-                                            if ui
-                                                .add(delete_button)
-                                                .on_hover_text("Borrar perfil")
-                                                .clicked()
-                                            {
-                                                delete_id = Some(profile.id.clone());
-                                            }
-
-                                            let edit_button = egui::Button::new(
-                                                RichText::new("✏")
-                                                    .color(Color32::from_rgb(236, 240, 248)),
-                                            )
-                                            .fill(Color32::from_rgb(44, 52, 68))
-                                            .stroke(Stroke::new(
-                                                1.0,
-                                                Color32::from_rgb(72, 84, 104),
-                                            ))
-                                            .min_size(egui::vec2(32.0, 32.0));
-
-                                            if ui
-                                                .add(edit_button)
-                                                .on_hover_text("Editar perfil")
-                                                .clicked()
-                                            {
-                                                edit_id = Some(profile.id.clone());
-                                            }
-                                        },
-                                    );
-                                });
-
-                                ui.add_space(4.0);
-
-                                let file_name = std::path::Path::new(&profile.config_file)
-                                    .file_name()
-                                    .map(|name| name.to_string_lossy().into_owned())
-                                    .unwrap_or_else(|| "sin archivo importado".to_string());
+                            ui.horizontal(|ui| {
+                                let icon_color = if is_selected {
+                                    Color32::from_rgb(96, 165, 250)
+                                } else {
+                                    Color32::from_rgb(100, 116, 139)
+                                };
 
                                 ui.label(
-                                    RichText::new(format!("📄 {}", file_name))
-                                        .color(Color32::from_rgb(170, 180, 195)),
+                                    RichText::new(regular::SHIELD_CHECK)
+                                        .size(18.0)
+                                        .color(icon_color),
                                 );
 
-                                if !profile.username.trim().is_empty() {
-                                    ui.label(
-                                        RichText::new(format!("👤 {}", profile.username))
-                                            .color(Color32::from_rgb(170, 180, 195)),
-                                    );
-                                }
+                                ui.label(
+                                    RichText::new(&profile.name)
+                                        .strong()
+                                        .size(14.0)
+                                        .color(Color32::from_rgb(226, 232, 240)),
+                                );
 
-                                let dns_text = if profile.use_update_resolv_conf {
-                                    "✔ DNS administrado con update-resolv-conf"
-                                } else {
-                                    "✖ DNS administrado manualmente"
-                                };
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        ui.spacing_mut().item_spacing.x = 4.0;
 
-                                let dns_color = if profile.use_update_resolv_conf {
-                                    Color32::from_rgb(80, 190, 120)
-                                } else {
-                                    Color32::from_rgb(220, 160, 70)
-                                };
+                                        if ui
+                                            .add(
+                                                egui::Button::new(
+                                                    RichText::new(regular::TRASH)
+                                                        .size(14.0)
+                                                        .color(Color32::from_rgb(239, 68, 68)),
+                                                )
+                                                .fill(Color32::TRANSPARENT)
+                                                .stroke(Stroke::NONE)
+                                                .min_size(egui::vec2(28.0, 28.0)),
+                                            )
+                                            .on_hover_text("Eliminar")
+                                            .clicked()
+                                        {
+                                            delete_id = Some(profile.id.clone());
+                                        }
 
-                                ui.label(RichText::new(dns_text).color(dns_color));
+                                        if ui
+                                            .add(
+                                                egui::Button::new(
+                                                    RichText::new(regular::PENCIL_SIMPLE)
+                                                        .size(14.0)
+                                                        .color(Color32::from_rgb(148, 163, 184)),
+                                                )
+                                                .fill(Color32::TRANSPARENT)
+                                                .stroke(Stroke::NONE)
+                                                .min_size(egui::vec2(28.0, 28.0)),
+                                            )
+                                            .on_hover_text("Editar")
+                                            .clicked()
+                                        {
+                                            edit_id = Some(profile.id.clone());
+                                        }
+                                    },
+                                );
                             });
                         });
 
-                    ui.add_space(8.0);
+                    ui.add_space(4.0);
                 }
 
                 if let Some(id) = edit_id {
@@ -170,7 +184,7 @@ impl App {
                     if let Some(profile) = self.config.find_profile(&id).cloned() {
                         if let Err(err) = AppConfig::cleanup_profile_assets(&profile) {
                             self.notify_error(format!(
-                                "El perfil se eliminó, pero hubo un problema al limpiar sus archivos: {}",
+                                "Error al limpiar archivos del perfil: {}",
                                 err
                             ));
                         }
@@ -189,197 +203,158 @@ impl App {
     }
 }
 
-fn header(ui: &mut Ui) {
-    egui::Frame::group(ui.style())
-        .fill(Color32::from_rgb(24, 28, 36))
-        .stroke(Stroke::new(1.0, Color32::from_rgb(52, 60, 76)))
-        .show(ui, |ui| {
-            ui.vertical(|ui| {
-                ui.label(
-                    RichText::new("🗂 Perfiles VPN")
-                        .size(19.0)
-                        .strong()
-                        .color(Color32::from_rgb(235, 240, 248)),
-                );
-                ui.add_space(2.0);
-                ui.label(
-                    RichText::new(
-                        "Gestiona perfiles OpenVPN con archivo importado, usuario y contraseña.",
-                    )
-                    .size(12.0)
-                    .color(Color32::from_rgb(170, 180, 195)),
-                );
-            });
-        });
-
-    ui.add_space(10.0);
-}
-
-fn empty_state(ui: &mut Ui) {
-    egui::Frame::group(ui.style())
-        .fill(Color32::from_rgb(24, 28, 36))
-        .stroke(Stroke::new(1.0, Color32::from_rgb(52, 60, 76)))
-        .show(ui, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.add_space(8.0);
-                ui.label(
-                    RichText::new("No hay perfiles VPN")
-                        .strong()
-                        .size(16.0)
-                        .color(Color32::from_rgb(230, 235, 242)),
-                );
-                ui.add_space(4.0);
-                ui.label(
-                    RichText::new("Pulsa “Nuevo perfil” para crear el primero.")
-                        .color(Color32::from_rgb(160, 170, 185)),
-                );
-                ui.add_space(8.0);
-            });
-        });
-}
-
 fn render_profile_form(ui: &mut Ui, mut form: VpnProfile, is_new: bool) -> FormAction<VpnProfile> {
     let title = if is_new {
-        "Nuevo perfil VPN"
+        format!("{} Nuevo perfil", regular::PLUS_CIRCLE)
     } else {
-        "Editar perfil VPN"
+        format!("{} Editar perfil", regular::PENCIL_SIMPLE)
     };
 
     let mut save = false;
     let mut cancel = false;
 
-    egui::Frame::group(ui.style())
-        .fill(Color32::from_rgb(24, 29, 38))
-        .stroke(Stroke::new(1.0, Color32::from_rgb(52, 60, 76)))
+    egui::Frame::none()
+        .fill(Color32::from_rgb(20, 27, 38))
+        .stroke(Stroke::new(1.0, Color32::from_rgb(45, 55, 72)))
+        .rounding(egui::Rounding::same(10.0))
+        .inner_margin(egui::Margin::symmetric(14.0, 14.0))
         .show(ui, |ui| {
-            ui.vertical(|ui| {
+            ui.label(
+                RichText::new(title)
+                    .strong()
+                    .size(15.0)
+                    .color(Color32::from_rgb(226, 232, 240)),
+            );
+            ui.add_space(4.0);
+            ui.separator();
+            ui.add_space(4.0);
+
+            field_label(ui, "Nombre");
+            ui.add(
+                egui::TextEdit::singleline(&mut form.name)
+                    .hint_text("Ej. Oficina principal")
+                    .desired_width(ui.available_width()),
+            );
+
+            ui.add_space(6.0);
+
+            field_label(ui, "Fichero .ovpn");
+            let imported_name = std::path::Path::new(&form.config_file)
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "Sin fichero".to_string());
+
+            ui.horizontal(|ui| {
                 ui.label(
-                    RichText::new(format!("📝 {}", title))
-                        .strong()
-                        .size(16.0)
-                        .color(Color32::from_rgb(238, 242, 248)),
+                    RichText::new(&imported_name)
+                        .size(12.0)
+                        .color(Color32::from_rgb(148, 163, 184)),
                 );
-                ui.separator();
+            });
 
-                compact_label(ui, "Nombre");
-                ui.add(
-                    egui::TextEdit::singleline(&mut form.name)
-                        .hint_text("Ej. Oficina principal")
-                        .desired_width(ui.available_width()),
-                );
-
-                ui.add_space(8.0);
-
-                compact_label(ui, "Fichero .ovpn");
-                let imported_name = std::path::Path::new(&form.config_file)
-                    .file_name()
-                    .map(|name| name.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "Ningún fichero importado".to_string());
-
-                ui.label(
-                    RichText::new(format!("📄 {}", imported_name))
-                        .color(Color32::from_rgb(180, 190, 205)),
-                );
-
-                let import_button = egui::Button::new(
-                    RichText::new("📂 Importar .ovpn")
-                        .strong()
-                        .color(Color32::from_rgb(245, 247, 250)),
+            if ui
+                .add(
+                    egui::Button::new(
+                        RichText::new(format!("{} Importar .ovpn", regular::UPLOAD_SIMPLE))
+                            .strong()
+                            .size(12.5)
+                            .color(Color32::WHITE),
+                    )
+                    .fill(Color32::from_rgb(37, 99, 235))
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(59, 130, 246)))
+                    .min_size(egui::vec2(ui.available_width(), 30.0)),
                 )
-                .fill(Color32::from_rgb(44, 118, 255))
-                .stroke(Stroke::new(1.0, Color32::from_rgb(66, 138, 255)))
-                .min_size(egui::vec2(ui.available_width(), 32.0));
-
-                if ui.add(import_button).clicked() {
-                    if let Some(path) = rfd::FileDialog::new()
-                        .set_title("Seleccionar fichero .ovpn")
-                        .add_filter("OpenVPN Config", &["ovpn", "conf"])
-                        .pick_file()
-                    {
-                        match AppConfig::import_profile_config(&form.id, &path) {
-                            Ok(target) => {
-                                form.config_file = target.display().to_string();
-                            }
-                            Err(err) => {
-                                ui.colored_label(
-                                    Color32::from_rgb(220, 80, 80),
-                                    format!("Error al importar: {}", err),
-                                );
-                            }
+                .clicked()
+            {
+                if let Some(path) = rfd::FileDialog::new()
+                    .set_title("Seleccionar fichero .ovpn")
+                    .add_filter("OpenVPN Config", &["ovpn", "conf"])
+                    .pick_file()
+                {
+                    match AppConfig::import_profile_config(&form.id, &path) {
+                        Ok(target) => {
+                            form.config_file = target.display().to_string();
+                        }
+                        Err(err) => {
+                            ui.colored_label(
+                                Color32::from_rgb(239, 68, 68),
+                                format!("Error: {}", err),
+                            );
                         }
                     }
                 }
+            }
 
-                ui.add_space(8.0);
+            ui.add_space(6.0);
 
-                compact_label(ui, "Usuario VPN");
-                ui.add(
-                    egui::TextEdit::singleline(&mut form.username)
-                        .hint_text("usuario")
-                        .desired_width(ui.available_width()),
-                );
+            field_label(ui, "Usuario VPN");
+            ui.add(
+                egui::TextEdit::singleline(&mut form.username)
+                    .hint_text("usuario")
+                    .desired_width(ui.available_width()),
+            );
 
-                ui.add_space(8.0);
+            ui.add_space(6.0);
 
-                compact_label(ui, "Contraseña VPN");
-                ui.add(
-                    egui::TextEdit::singleline(&mut form.password)
-                        .password(true)
-                        .hint_text("contraseña")
-                        .desired_width(ui.available_width()),
-                );
+            field_label(ui, "Contraseña VPN");
+            ui.add(
+                egui::TextEdit::singleline(&mut form.password)
+                    .password(true)
+                    .hint_text("contraseña")
+                    .desired_width(ui.available_width()),
+            );
 
-                ui.add_space(8.0);
+            ui.add_space(6.0);
 
-                ui.checkbox(
-                    &mut form.use_update_resolv_conf,
-                    "Actualizar DNS con update-resolv-conf",
-                );
+            ui.checkbox(
+                &mut form.use_update_resolv_conf,
+                RichText::new("Gestionar DNS automáticamente")
+                    .size(12.5)
+                    .color(Color32::from_rgb(203, 213, 225)),
+            );
 
-                if form.use_update_resolv_conf {
-                    ui.label(
-                        RichText::new(
-                            "Se añadirán los scripts de actualización DNS al ejecutar OpenVPN.",
-                        )
-                        .size(11.5)
-                        .color(Color32::from_rgb(165, 175, 190)),
-                    );
-                }
+            ui.add_space(8.0);
+            ui.separator();
+            ui.add_space(4.0);
 
-                ui.add_space(10.0);
-                ui.separator();
+            let can_save = !form.name.trim().is_empty() && !form.config_file.trim().is_empty();
 
-                let can_save = !form.name.trim().is_empty() && !form.config_file.trim().is_empty();
-
-                let save_button = egui::Button::new(
-                    RichText::new("💾 Guardar")
-                        .strong()
-                        .color(Color32::from_rgb(245, 247, 250)),
+            if ui
+                .add_enabled(
+                    can_save,
+                    egui::Button::new(
+                        RichText::new(format!("{} Guardar", regular::FLOPPY_DISK))
+                            .strong()
+                            .color(Color32::WHITE),
+                    )
+                    .fill(Color32::from_rgb(37, 99, 235))
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(59, 130, 246)))
+                    .min_size(egui::vec2(ui.available_width(), 34.0)),
                 )
-                .fill(Color32::from_rgb(44, 118, 255))
-                .stroke(Stroke::new(1.0, Color32::from_rgb(66, 138, 255)))
-                .min_size(egui::vec2(ui.available_width(), 32.0));
+                .clicked()
+            {
+                save = true;
+            }
 
-                if ui.add_enabled(can_save, save_button).clicked() {
-                    save = true;
-                }
+            ui.add_space(4.0);
 
-                ui.add_space(6.0);
-
-                let cancel_button = egui::Button::new(
-                    RichText::new("✖ Cancelar").color(Color32::from_rgb(230, 235, 242)),
+            if ui
+                .add(
+                    egui::Button::new(
+                        RichText::new(format!("{} Cancelar", regular::X))
+                            .color(Color32::from_rgb(203, 213, 225)),
+                    )
+                    .fill(Color32::from_rgb(30, 38, 50))
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(51, 65, 85)))
+                    .min_size(egui::vec2(ui.available_width(), 34.0)),
                 )
-                .fill(Color32::from_rgb(44, 52, 68))
-                .stroke(Stroke::new(1.0, Color32::from_rgb(72, 84, 104)))
-                .min_size(egui::vec2(ui.available_width(), 32.0));
-
-                if ui.add(cancel_button).clicked() {
-                    cancel = true;
-                }
-            });
+                .clicked()
+            {
+                cancel = true;
+            }
         });
 
-    ui.add_space(10.0);
+    ui.add_space(8.0);
 
     if save {
         FormAction::Save {
@@ -396,12 +371,11 @@ fn render_profile_form(ui: &mut Ui, mut form: VpnProfile, is_new: bool) -> FormA
     }
 }
 
-fn compact_label(ui: &mut Ui, text: &str) {
+fn field_label(ui: &mut Ui, text: &str) {
     ui.label(
         RichText::new(text)
             .strong()
-            .size(12.5)
-            .color(Color32::from_rgb(225, 230, 238)),
+            .size(12.0)
+            .color(Color32::from_rgb(148, 163, 184)),
     );
-    ui.add_space(2.0);
 }

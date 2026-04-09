@@ -201,6 +201,16 @@ pub struct AppConfig {
     #[serde(default)]
     pub settings: AppSettings,
 
+    /// ID del perfil VPN seleccionado actualmente por el usuario.
+    /// Se persiste para que la selección sobreviva reinicios de la app.
+    #[serde(default)]
+    pub selected_profile_id: Option<String>,
+
+    /// ID del proxy seleccionado actualmente por el usuario.
+    /// Se persiste para que la selección sobreviva reinicios de la app.
+    #[serde(default)]
+    pub selected_proxy_id: Option<String>,
+
     #[serde(default)]
     pub vpn_profiles: Vec<VpnProfile>,
 
