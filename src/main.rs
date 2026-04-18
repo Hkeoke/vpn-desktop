@@ -7,9 +7,9 @@ fn main() -> Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_title("VPN Desktop")
             .with_app_id("vpn-desktop")
-            .with_inner_size([400.0, 600.0])
-            .with_min_inner_size([420.0, 560.0])
-            .with_resizable(false)
+            .with_inner_size([420.0, 600.0])
+            .with_min_inner_size([420.0, 600.0])
+            .with_max_inner_size([420.0, 600.0])
             .with_icon(window_icon()),
         ..Default::default()
     };
