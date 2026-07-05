@@ -394,6 +394,11 @@ fn build_connect_request(
         password: profile.password,
         proxy: proxy_runtime,
         use_update_resolv_conf: profile.use_update_resolv_conf,
+        bypass_hosts: profile.bypass_hosts
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
     })
 }
 

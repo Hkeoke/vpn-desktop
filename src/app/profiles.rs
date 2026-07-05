@@ -306,6 +306,15 @@ fn render_profile_form(ui: &mut Ui, mut form: VpnProfile, is_new: bool) -> FormA
 
             ui.add_space(6.0);
 
+            field_label(ui, "Excluir de la VPN (IPs o dominios separados por comas)");
+            ui.add(
+                egui::TextEdit::singleline(&mut form.bypass_hosts)
+                    .hint_text("ej: 10.12.25.230, github.com")
+                    .desired_width(ui.available_width()),
+            );
+
+            ui.add_space(6.0);
+
             ui.checkbox(
                 &mut form.use_update_resolv_conf,
                 RichText::new("Gestionar DNS automáticamente")

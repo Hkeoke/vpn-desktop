@@ -13,6 +13,7 @@ pub struct ConnectRequest {
     pub password: String,
     pub proxy: Option<ProxyRuntime>,
     pub use_update_resolv_conf: bool,
+    pub bypass_hosts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

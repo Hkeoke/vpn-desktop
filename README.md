@@ -259,3 +259,12 @@ Esto permite que el uso diario no dependa de lanzar `sudo` o `pkexec` desde la G
 3. Añadir política opcional de `polkit` si se decide usar además de `systemd`
 4. Refinar la detección de estado del helper desde la UI
 5. Completar distribución de iconos adicionales si más adelante se quiere PNG además de SVG
+
+
+## Construir el paquete DEB
+
+cargo build --release && sh packaging/linux/build-deb.sh
+
+## Instalar el paquete DEB
+
+sudo dpkg -i target/deb-build/vpn-desktop_0.1.0-1_amd64.deb

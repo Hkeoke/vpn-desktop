@@ -802,6 +802,16 @@ fn spawn_openvpn(
         args.push("/etc/openvpn/update-resolv-conf".into());
     }
 
+    for host in &request.bypass_hosts {
+        let trimmed = host.trim();
+        if !trimmed.is_empty() {
+            args.push("--route".into());
+            args.push(trimmed.to_string());
+            args.push("255.255.255.255".into());
+            args.push("net_gateway".into());
+        }
+    }
+
     shared.append_log(LogStream::Internal, format!("$ openvpn {}", args.join(" ")));
 
     let mut child = Command::new("openvpn")

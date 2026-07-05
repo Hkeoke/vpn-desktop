@@ -74,6 +74,9 @@ pub struct VpnProfile {
     ///   --down  /etc/openvpn/update-resolv-conf
     /// Necesario para que el DNS funcione correctamente en Linux.
     pub use_update_resolv_conf: bool,
+    /// Lista de IPs o dominios que deben saltarse la VPN.
+    #[serde(default)]
+    pub bypass_hosts: String,
 }
 
 impl Default for VpnProfile {
@@ -85,6 +88,7 @@ impl Default for VpnProfile {
             username: String::new(),
             password: String::new(),
             use_update_resolv_conf: true,
+            bypass_hosts: String::new(),
         }
     }
 }
