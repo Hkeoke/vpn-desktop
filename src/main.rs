@@ -22,7 +22,18 @@ fn main() -> Result<()> {
         ctx: std::sync::Arc::clone(&tray_ctx),
         is_connected: false,
     };
-    let tray_handle = ksni::blocking::TrayMethods::spawn(tray).unwrap();
+
+    // Intenta iniciar la bandeja, pero no falla si no está disponible
+    let tray_handle = match ksni::blocking::TrayMethods::spawn(tray) {
+        Ok(handle) => {
+            println!("Bandeja del sistema iniciada correctamente");
+            Some(handle)
+        }
+        Err(e) => {
+            eprintln!("No se pudo iniciar la bandeja del sistema: {}. La aplicación continuará sin icono en la bandeja.", e);
+            None
+        }
+    };
 
     eframe::run_native(
         "VPN Desktop",
@@ -32,7 +43,7 @@ fn main() -> Result<()> {
                 cc,
                 Some(tray_rx),
                 Some(tray_ctx),
-                Some(tray_handle),
+                tray_handle,
             )))
         }),
     )
