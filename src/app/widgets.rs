@@ -33,3 +33,5 @@ pub fn log_line_color(line: &str) -> Color32 {
 
     Color32::from_rgb(200, 200, 200)
 }
+
+

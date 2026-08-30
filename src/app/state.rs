@@ -43,6 +43,12 @@ pub struct App {
     pub tray_ctx: Option<Arc<Mutex<Option<egui::Context>>>>,
     pub tray_handle: Option<ksni::blocking::Handle<crate::app::tray::VpnTray>>,
     pub is_window_visible: bool,
+
+    // Estado de reconexión automática
+    pub user_wants_connected: bool,
+    pub auto_reconnect_at: Option<std::time::Instant>,
+    pub reconnect_attempt: u32,
+    pub last_disconnect_reason: Option<String>,
 }
 
 impl App {
@@ -89,6 +95,10 @@ impl App {
             tray_ctx,
             tray_handle,
             is_window_visible: true,
+            user_wants_connected: false,
+            auto_reconnect_at: None,
+            reconnect_attempt: 0,
+            last_disconnect_reason: None,
         }
     }
 
@@ -109,6 +119,14 @@ impl App {
         });
     }
 
+    pub fn cancel_reconnect(&mut self) {
+        self.user_wants_connected = false;
+        self.auto_reconnect_at = None;
+        self.reconnect_attempt = 0;
+        self.last_disconnect_reason = None;
+        self.vpn.disconnect();
+    }
+
     pub fn poll_vpn_events(&mut self) {
         for event in self.vpn.poll() {
             match event {
@@ -125,6 +143,62 @@ impl App {
                         let _ = tray.update(|t| {
                             t.is_connected = is_connected;
                         });
+                    }
+
+                    match &status {
+                        VpnStatus::Connected => {
+                            self.user_wants_connected = true;
+                            self.auto_reconnect_at = None;
+                            self.reconnect_attempt = 0;
+                            self.last_disconnect_reason = None;
+                        }
+                        VpnStatus::Connecting => {
+                            self.auto_reconnect_at = None;
+                        }
+                        VpnStatus::Failed(err) => {
+                            let lower = err.to_ascii_lowercase();
+                            let is_auth_failure = lower.contains("auth_failed")
+                                || lower.contains("authentication failed")
+                                || lower.contains("contraseña")
+                                || lower.contains("credencial");
+
+                            if is_auth_failure {
+                                self.user_wants_connected = false;
+                                self.auto_reconnect_at = None;
+                                self.reconnect_attempt = 0;
+                                self.notify_error(
+                                    "Fallo de autenticación en la VPN. Revisa tus credenciales.",
+                                );
+                            } else if self.user_wants_connected
+                                && self.config.settings.auto_reconnect
+                            {
+                                self.reconnect_attempt += 1;
+                                self.last_disconnect_reason = Some(err.clone());
+                                let base_delay =
+                                    self.config.settings.reconnect_delay_secs.max(1) as u64;
+                                let backoff =
+                                    ((self.reconnect_attempt as u64).saturating_sub(1) * 2).min(15);
+                                let delay = (base_delay + backoff).clamp(2, 30);
+                                self.auto_reconnect_at = Some(
+                                    std::time::Instant::now()
+                                        + std::time::Duration::from_secs(delay),
+                                );
+                            }
+                        }
+                        VpnStatus::Disconnected => {
+                            if self.user_wants_connected && self.config.settings.auto_reconnect {
+                                self.reconnect_attempt += 1;
+                                let base_delay =
+                                    self.config.settings.reconnect_delay_secs.max(1) as u64;
+                                let backoff =
+                                    ((self.reconnect_attempt as u64).saturating_sub(1) * 2).min(15);
+                                let delay = (base_delay + backoff).clamp(2, 30);
+                                self.auto_reconnect_at = Some(
+                                    std::time::Instant::now()
+                                        + std::time::Duration::from_secs(delay),
+                                );
+                            }
+                        }
                     }
                 }
                 VpnEvent::HelperStatusChanged(status) => {

@@ -195,8 +195,33 @@ impl ProxyConfig {
 
 // ─── Ajustes de la aplicación ────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct AppSettings {}
+fn default_true() -> bool {
+    true
+}
+
+fn default_reconnect_delay() -> u32 {
+    3
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AppSettings {
+    /// Activa el reintento automático si la conexión VPN cae inesperadamente.
+    #[serde(default = "default_true")]
+    pub auto_reconnect: bool,
+
+    /// Tiempo de espera base en segundos antes de intentar reconectar tras una desconexión.
+    #[serde(default = "default_reconnect_delay")]
+    pub reconnect_delay_secs: u32,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            auto_reconnect: true,
+            reconnect_delay_secs: 3,
+        }
+    }
+}
 
 // ─── Configuración completa de la aplicación ─────────────────────────────────
 
@@ -629,3 +654,38 @@ impl AppConfig {
         self.proxy_configs.retain(|p| p.id != id);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_settings_defaults() {
+        let settings = AppSettings::default();
+        assert!(settings.auto_reconnect);
+        assert_eq!(settings.reconnect_delay_secs, 3);
+    }
+
+    #[test]
+    fn test_app_settings_deserialization() {
+        let toml_str = r#"
+            [settings]
+            auto_reconnect = false
+            reconnect_delay_secs = 10
+        "#;
+        let config: AppConfig = toml::from_str(toml_str).unwrap();
+        assert!(!config.settings.auto_reconnect);
+        assert_eq!(config.settings.reconnect_delay_secs, 10);
+    }
+
+    #[test]
+    fn test_app_settings_default_fallback() {
+        let toml_str = r#"
+            [settings]
+        "#;
+        let config: AppConfig = toml::from_str(toml_str).unwrap();
+        assert!(config.settings.auto_reconnect);
+        assert_eq!(config.settings.reconnect_delay_secs, 3);
+    }
+}
+

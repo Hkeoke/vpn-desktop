@@ -164,6 +164,7 @@ enum ManagerCommand {
     Connect(ConnectRequest),
     Disconnect,
     ProcessConnected,
+    ProcessReconnecting(String),
     ProcessExited(Result<()>),
 }
 
@@ -521,6 +522,22 @@ fn manager_loop(
                     );
                 }
             }
+            Ok(ManagerCommand::ProcessReconnecting(reason)) => {
+                if let Some(runtime) = session.as_ref() {
+                    shared.append_log(
+                        LogStream::Internal,
+                        format!("OpenVPN en proceso de reconexión ({reason}). Actualizando estado..."),
+                    );
+                    shared.set_phase(
+                        VpnPhase::Connecting,
+                        Some(runtime.profile_name.clone()),
+                        runtime.proxy_name.clone(),
+                        Some(runtime.pid),
+                        Some(runtime.started_at_unix_ms),
+                        None,
+                    );
+                }
+            }
             Ok(ManagerCommand::ProcessExited(result)) => {
                 let profile_name = session.as_ref().map(|s| s.profile_name.clone());
                 let proxy_name = session.as_ref().and_then(|s| s.proxy_name.clone());
@@ -775,6 +792,19 @@ fn spawn_openvpn(
         request.config_path.display().to_string(),
         "--auth-user-pass".to_string(),
         vpn_auth_file.path().display().to_string(),
+        "--keepalive".to_string(),
+        "10".to_string(),
+        "30".to_string(),
+        "--ping-timer-rem".to_string(),
+        "--resolv-retry".to_string(),
+        "infinite".to_string(),
+        "--connect-retry".to_string(),
+        "2".to_string(),
+        "15".to_string(),
+        "--persist-tun".to_string(),
+        "--persist-key".to_string(),
+        "--verb".to_string(),
+        "3".to_string(),
     ];
 
     if let Some(proxy) = &request.proxy {
@@ -800,6 +830,7 @@ fn spawn_openvpn(
         args.push("/etc/openvpn/update-resolv-conf".into());
         args.push("--down".into());
         args.push("/etc/openvpn/update-resolv-conf".into());
+        args.push("--down-pre".into());
     }
 
     for host in &request.bypass_hosts {
@@ -836,6 +867,10 @@ fn spawn_openvpn(
                 for line in reader.lines().flatten() {
                     if line.contains("Initialization Sequence Completed") {
                         let _ = manager_tx.send(ManagerCommand::ProcessConnected);
+                    } else if is_reconnecting_line(&line) {
+                        let _ = manager_tx.send(ManagerCommand::ProcessReconnecting(
+                            extract_reconnecting_reason(&line),
+                        ));
                     }
                     shared.append_log(LogStream::Stdout, line);
                 }
@@ -911,3 +946,64 @@ fn stop_openvpn(child: &mut Child, pid: u32, shared: Arc<SharedState>) -> Result
     child.wait().context("wait() tras kill falló")?;
     Ok(())
 }
+
+fn is_reconnecting_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.contains("inactivity timeout (--ping-restart)")
+        || lower.contains("process restarting")
+        || lower.contains("connection reset, restarting")
+        || lower.contains("restart pause,")
+        || lower.contains("tls error: tls key negotiation failed")
+        || lower.contains("tls error: local/remote tls keys are out of sync")
+        || (lower.contains("sigusr1") && lower.contains("restarting"))
+}
+
+fn extract_reconnecting_reason(line: &str) -> String {
+    let lower = line.to_ascii_lowercase();
+    if lower.contains("ping-restart") || lower.contains("inactivity timeout") {
+        "inactividad / ping agotado".to_string()
+    } else if lower.contains("connection reset") {
+        "conexión reiniciada por el servidor/proxy".to_string()
+    } else if lower.contains("tls error") {
+        "error de negociación TLS / red inestable".to_string()
+    } else if lower.contains("sigusr1") {
+        "señal de reinicio recibida".to_string()
+    } else {
+        "reinicio de conexión".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_reconnecting_line() {
+        assert!(is_reconnecting_line("[server] Inactivity timeout (--ping-restart), restarting"));
+        assert!(is_reconnecting_line("SIGUSR1[soft,ping-restart] received, process restarting"));
+        assert!(is_reconnecting_line("Connection reset, restarting [-1]"));
+        assert!(is_reconnecting_line("Restart pause, 5 second(s)"));
+        assert!(is_reconnecting_line("TLS Error: TLS key negotiation failed to occur within 60 seconds (check your network connectivity)"));
+        assert!(is_reconnecting_line("TLS Error: local/remote TLS keys are out of sync: [AF_INET]1.2.3.4:1194"));
+        assert!(!is_reconnecting_line("Initialization Sequence Completed"));
+        assert!(!is_reconnecting_line("Peer Connection Initiated with [AF_INET]1.2.3.4:1194"));
+    }
+
+    #[test]
+    fn test_extract_reconnecting_reason() {
+        assert_eq!(
+            extract_reconnecting_reason("[server] Inactivity timeout (--ping-restart), restarting"),
+            "inactividad / ping agotado"
+        );
+        assert_eq!(
+            extract_reconnecting_reason("Connection reset, restarting [-1]"),
+            "conexión reiniciada por el servidor/proxy"
+        );
+        assert_eq!(
+            extract_reconnecting_reason("TLS Error: TLS key negotiation failed"),
+            "error de negociación TLS / red inestable"
+        );
+    }
+}
+
+

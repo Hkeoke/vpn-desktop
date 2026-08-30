@@ -108,10 +108,26 @@ impl App {
     }
 
     fn action_button(&mut self, ui: &mut Ui) {
-        let is_active = self.vpn_status.is_active();
+        let is_waiting_reconnect = self.auto_reconnect_at.is_some();
+        let is_reconnecting_active = self.vpn_status == VpnStatus::Connecting && self.reconnect_attempt > 0;
+        let is_connecting_first = self.vpn_status == VpnStatus::Connecting && self.reconnect_attempt == 0;
+        let is_connected = self.vpn_status == VpnStatus::Connected;
+        let is_active = self.vpn_status.is_active() || is_waiting_reconnect;
         let has_profile = self.selected_profile_id.is_some();
 
-        let (button_text, button_fill, button_stroke) = if is_active {
+        let (button_text, button_fill, button_stroke) = if is_waiting_reconnect || is_reconnecting_active {
+            (
+                "Reconectando...",
+                Color32::from_rgb(180, 95, 30),
+                Color32::from_rgb(220, 130, 50),
+            )
+        } else if is_connecting_first {
+            (
+                "Conectando...",
+                Color32::from_rgb(45, 95, 170),
+                Color32::from_rgb(70, 130, 220),
+            )
+        } else if is_connected {
             (
                 "Desconectar",
                 Color32::from_rgb(170, 57, 57),
@@ -144,7 +160,7 @@ impl App {
                 .clicked()
             {
                 if is_active {
-                    self.vpn.disconnect();
+                    self.cancel_reconnect();
                 } else {
                     self.do_connect();
                 }
@@ -174,6 +190,11 @@ impl App {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.small_button("🗑").on_hover_text("Limpiar logs").clicked() {
                             self.logs.clear();
+                        }
+
+                        if ui.small_button("📋").on_hover_text("Copiar logs al portapapeles").clicked() {
+                            let text = self.logs.join("\n");
+                            ui.output_mut(|o| o.copied_text = text);
                         }
 
                         ui.add_space(6.0);
@@ -211,7 +232,7 @@ impl App {
             });
     }
 
-    fn do_connect(&mut self) {
+    pub(crate) fn do_connect(&mut self) {
         let profile_id = match &self.selected_profile_id {
             Some(id) => id.clone(),
             None => return,
@@ -242,6 +263,10 @@ impl App {
                 return;
             }
         }
+
+        self.user_wants_connected = true;
+        self.auto_reconnect_at = None;
+        self.last_disconnect_reason = None;
 
         self.logs.clear();
         self.vpn.connect(profile, proxy);

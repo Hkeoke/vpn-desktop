@@ -21,26 +21,50 @@ impl eframe::App for App {
             }
         }
 
+        let mut tray_actions = Vec::new();
         if let Some(rx) = &self.tray_rx {
             while let Ok(action) = rx.try_recv() {
-                match action {
-                    crate::app::tray::TrayAction::ToggleWindow => {
-                        self.is_window_visible = !self.is_window_visible;
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(self.is_window_visible));
-                    }
-                    crate::app::tray::TrayAction::Quit => {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
+                tray_actions.push(action);
+            }
+        }
+
+        for action in tray_actions {
+            match action {
+                crate::app::tray::TrayAction::ToggleWindow => {
+                    self.is_window_visible = !self.is_window_visible;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Visible(self.is_window_visible));
+                }
+                crate::app::tray::TrayAction::Quit => {
+                    self.cancel_reconnect();
+                    self.vpn.disconnect();
+                    std::thread::sleep(std::time::Duration::from_millis(60));
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
         }
 
+        if ctx.input(|i| i.viewport().close_requested()) {
+            self.cancel_reconnect();
+            self.vpn.disconnect();
+            std::thread::sleep(std::time::Duration::from_millis(60));
+        }
+
         self.poll_vpn_events();
+
+        // Comprobar si hay una reconexión automática pendiente
+        if let Some(reconnect_at) = self.auto_reconnect_at {
+            if std::time::Instant::now() >= reconnect_at {
+                self.auto_reconnect_at = None;
+                self.do_connect();
+            } else {
+                ctx.request_repaint_after(std::time::Duration::from_millis(200));
+            }
+        }
 
         if matches!(
             self.vpn_status,
             VpnStatus::Connecting | VpnStatus::Connected
-        ) {
+        ) || self.auto_reconnect_at.is_some() {
             ctx.request_repaint_after(std::time::Duration::from_millis(150));
         }
 
@@ -104,6 +128,113 @@ impl eframe::App for App {
             ..egui::Visuals::dark()
         };
         ctx.set_visuals(visuals);
+
+        egui::TopBottomPanel::top("custom_title_bar")
+            .exact_height(36.0)
+            .frame(
+                egui::Frame::none()
+                    .fill(egui::Color32::from_rgb(12, 17, 24))
+                    .inner_margin(egui::Margin::symmetric(14.0, 6.0)),
+            )
+            .show(ctx, |ui| {
+                let title_bar_rect = ui.max_rect();
+                let title_bar_response = ui.interact(
+                    title_bar_rect,
+                    ui.id().with("window_drag_zone"),
+                    egui::Sense::click_and_drag(),
+                );
+
+                if title_bar_response.drag_started_by(egui::PointerButton::Primary) {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
+                }
+
+                ui.allocate_ui_at_rect(title_bar_rect, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new("VPN Desktop")
+                                .size(13.0)
+                                .strong()
+                                .color(egui::Color32::from_rgb(220, 226, 235)),
+                        );
+
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let circle_btn =
+                                |ui: &mut egui::Ui, icon: &str, is_close: bool| -> egui::Response {
+                                    let size = egui::vec2(22.0, 22.0);
+                                    let (rect, response) =
+                                        ui.allocate_exact_size(size, egui::Sense::click());
+
+                                    let hovered = response.hovered();
+                                    let clicked = response.is_pointer_button_down_on();
+
+                                    let (bg_color, fg_color) = if is_close {
+                                        if clicked {
+                                            (
+                                                egui::Color32::from_rgb(180, 40, 40),
+                                                egui::Color32::WHITE,
+                                            )
+                                        } else if hovered {
+                                            (
+                                                egui::Color32::from_rgb(220, 55, 55),
+                                                egui::Color32::WHITE,
+                                            )
+                                        } else {
+                                            (
+                                                egui::Color32::from_rgb(46, 50, 58),
+                                                egui::Color32::from_rgb(215, 220, 230),
+                                            )
+                                        }
+                                    } else if clicked {
+                                        (
+                                            egui::Color32::from_rgb(72, 78, 90),
+                                            egui::Color32::WHITE,
+                                        )
+                                    } else if hovered {
+                                        (
+                                            egui::Color32::from_rgb(60, 66, 78),
+                                            egui::Color32::WHITE,
+                                        )
+                                    } else {
+                                        (
+                                            egui::Color32::from_rgb(46, 50, 58),
+                                            egui::Color32::from_rgb(215, 220, 230),
+                                        )
+                                    };
+
+                                    ui.painter().circle_filled(rect.center(), 11.0, bg_color);
+                                    ui.painter().text(
+                                        rect.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        icon,
+                                        egui::FontId::proportional(11.0),
+                                        fg_color,
+                                    );
+
+                                    response
+                                };
+
+                            // Botón Cerrar (círculo nativo con X)
+                            let close_resp =
+                                circle_btn(ui, egui_phosphor::regular::X, true).on_hover_text("Cerrar");
+                            if close_resp.clicked() {
+                                self.cancel_reconnect();
+                                self.vpn.disconnect();
+                                std::thread::sleep(std::time::Duration::from_millis(60));
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                            }
+
+                            ui.add_space(6.0);
+
+                            // Botón Minimizar (círculo nativo con —)
+                            let min_resp = circle_btn(ui, egui_phosphor::regular::MINUS, false)
+                                .on_hover_text("Minimizar");
+                            if min_resp.clicked() {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                            }
+                        });
+                    });
+                });
+            });
 
         egui::TopBottomPanel::top("tab_bar")
             .exact_height(82.0)
@@ -210,7 +341,7 @@ impl eframe::App for App {
                                             if ui
                                                 .add(
                                                     egui::Button::new(
-                                                        egui::RichText::new("✕").color(
+                                                        egui::RichText::new(egui_phosphor::regular::X).color(
                                                             egui::Color32::from_rgb(215, 223, 232),
                                                         ),
                                                     )

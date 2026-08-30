@@ -353,6 +353,8 @@ fn worker_loop(cmd_rx: Receiver<WorkerCmd>, event_tx: Sender<VpnEvent>) {
                 client.disconnect_vpn();
             }
             Ok(WorkerCmd::Shutdown) => {
+                client.disconnect_vpn();
+                std::thread::sleep(Duration::from_millis(50));
                 break;
             }
             Err(crossbeam_channel::RecvTimeoutError::Timeout) => {}
