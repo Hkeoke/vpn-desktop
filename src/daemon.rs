@@ -801,8 +801,6 @@ fn spawn_openvpn(
         "--connect-retry".to_string(),
         "2".to_string(),
         "15".to_string(),
-        "--persist-tun".to_string(),
-        "--persist-key".to_string(),
         "--verb".to_string(),
         "3".to_string(),
     ];
